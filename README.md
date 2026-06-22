@@ -47,6 +47,9 @@ start swindle because it (swindle) won't start without it
 - [ ] separate the trackpad scroll from the mousee scroll 
 - [ ] Add ability to change your keymap
 - [ ] Add animations via [scenefx](https://github.com/wlrfx/scenefx) when 0.5 drops (in another branch)
+- [ ] Add the ability for the compositor to read a custom path for configs
+- [ ] Add /etc/swindle/config.lua as a fallback path if $HOME/.config/swindle/config.lua is not found 
+
 
 ## License
 
