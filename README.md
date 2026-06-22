@@ -39,12 +39,14 @@ N/A
 
 read example/config.lua. It should give you a basic idea of how configuring swindle works. 
 
-> note: it's best to copy examples/config.lua into XDG_HOME_DIR/.config/swindle/ before you attempt to 
+> note: it's best to copy /etc/swindle/config.lua into XDG_HOME_DIR/.config/swindle/ before you attempt to 
 start swindle because it (swindle) won't start without it
 
 ## Checklist
 
 - [ ] separate the trackpad scroll from the mousee scroll 
+- [ ] Add ability to change your keymap
+- [ ] Add animations via [scenefx](https://github.com/wlrfx/scenefx) when 0.5 drops (in another branch)
 
 ## License
 

@@ -86,10 +86,13 @@ install: swindle smsg/smsg
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/swindle
 	cp -f smsg/smsg $(DESTDIR)$(PREFIX)/bin
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/smsg
+	mkdir -p $(DESTDIR)/etc/swindle
+	cp -r example/* $(DESTDIR)/etc/swindle
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/swindle
 	rm -f $(DESTDIR)$(PREFIX)/bin/smsg
+	rm -rf $(DESTDIR)/etc/swindle
 
 .SUFFIXES: .c .o
 .c.o:
