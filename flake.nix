@@ -25,13 +25,14 @@
           ];
 
           buildInputs = with pkgs; [
-            wayland        
-            wlroots       
+            wayland           
+            wlroots          
+            pixman          
             libxkbcommon
             libinput
             lua5_4
-            xorg.libxcb  
-            xorg.xcbutilwm 
+            libxcb         
+            libxcb-wm     
           ];
 
           enableParallelBuilding = true;
@@ -44,8 +45,8 @@
           makeFlags = [ "PREFIX=${placeholder "out"}" ];
 
           meta = with pkgs.lib; {
-            description = "Poor man's Hyprland";
-            license = licenses.gplt;
+            description = "A dwl fork with Lua configuration, IPC support, and ext-workspace-v1";
+            license = with licenses; [ gpl3Only mit isc ]; 
             platforms = platforms.linux;
             mainProgram = "swindle";
           };
