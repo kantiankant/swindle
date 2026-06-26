@@ -476,6 +476,8 @@ config_get_path(char *buf, size_t bufsz)
 		if (!home) home = "/root"; /* you're probably root, aren't you */
 		snprintf(buf, bufsz, "%s/.config/swindle/config.lua", home);
 	}
+	if (access(buf, F_OK) != 0)
+		snprintf(buf, bufsz, "/etc/swindle/config.lua");
 	return buf;
 }
 
