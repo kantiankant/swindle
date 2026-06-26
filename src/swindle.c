@@ -1,12 +1,14 @@
 /*
  * See LICENSE file and licenses/ directory for copyright and license details.
  */
+#include <errno.h>
 #include <getopt.h>
 #include <libinput.h>
 #include <linux/input-event-codes.h>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -477,6 +479,7 @@ static struct wlr_xwayland *xwayland;
 
 static Config cfg;
 static struct wl_event_source *cfg_watch_src;
+static const char *custom_cfg_path;
 
 #include "config.h"
 
@@ -2678,10 +2681,16 @@ setup(void)
 	/* Load config before anything else so all settings are ready */
 	{
 		char cfgpath[1024];
+		const char *path;
 		int debug_override = (cfg.log_level == WLR_DEBUG); /* set by -d flag in main() */
-		config_get_path(cfgpath, sizeof(cfgpath));
-		if (config_load(cfgpath, &cfg) < 0)
-			die("failed to load config from '%s'", cfgpath);
+		if (custom_cfg_path)
+			path = custom_cfg_path;
+		else {
+			config_get_path(cfgpath, sizeof(cfgpath));
+			path = cfgpath;
+		}
+		if (config_load(path, &cfg) < 0)
+			die("failed to load config from '%s'", path);
 		if (debug_override)
 			cfg.log_level = WLR_DEBUG;
 	}
@@ -2699,8 +2708,12 @@ setup(void)
 
 	{
 		char cfgpath[1024];
-		config_get_path(cfgpath, sizeof(cfgpath));
-		cfg_watch_src = config_watch_start(event_loop, cfgpath,
+		const char *path = custom_cfg_path;
+		if (!path) {
+			config_get_path(cfgpath, sizeof(cfgpath));
+			path = cfgpath;
+		}
+		cfg_watch_src = config_watch_start(event_loop, path,
 		                                    on_config_reload, NULL);
 	}
 
@@ -3751,15 +3764,34 @@ main(int argc, char *argv[])
 	char *startup_cmd = NULL;
 	int c;
 
-	while ((c = getopt(argc, argv, "s:hdv")) != -1) {
-		if (c == 's')
+	while ((c = getopt(argc, argv, "c:s:hdv")) != -1) {
+		switch (c) {
+		case 'c':
+		{
+			struct stat st;
+			if (stat(optarg, &st) < 0) {
+				if (errno == ENOENT)
+					die("error: config file '%s' does not exist", optarg);
+				die("error: config file '%s': %s", optarg, strerror(errno));
+			}
+			if (S_ISDIR(st.st_mode))
+				die("error: config file '%s' is a directory, expected a regular file", optarg);
+			if (access(optarg, R_OK) < 0)
+				die("error: config file '%s' is not readable (permission denied)", optarg);
+			custom_cfg_path = optarg;
+			break;
+		}
+		case 's':
 			startup_cmd = optarg;
-		else if (c == 'd')
+			break;
+		case 'd':
 			cfg.log_level = WLR_DEBUG; /* override before setup() */
-		else if (c == 'v')
+			break;
+		case 'v':
 			die("swindle " VERSION);
-		else
+		default:
 			goto usage;
+		}
 	}
 	if (optind < argc)
 		goto usage;
@@ -3773,5 +3805,5 @@ main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 
 usage:
-	die("Usage: %s [-v] [-d] [-s startup command]", argv[0]);
+	die("Usage: %s [-v] [-d] [-s startup command] [-c config file]", argv[0]);
 }
