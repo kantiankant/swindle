@@ -1,12 +1,14 @@
 /*
  * See LICENSE file and licenses/ directory for copyright and license details.
  */
+#include <errno.h>
 #include <getopt.h>
 #include <libinput.h>
 #include <linux/input-event-codes.h>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -3765,8 +3767,20 @@ main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "c:s:hdv")) != -1) {
 		switch (c) {
 		case 'c':
+		{
+			struct stat st;
+			if (stat(optarg, &st) < 0) {
+				if (errno == ENOENT)
+					die("error: config file '%s' does not exist", optarg);
+				die("error: config file '%s': %s", optarg, strerror(errno));
+			}
+			if (S_ISDIR(st.st_mode))
+				die("error: config file '%s' is a directory, expected a regular file", optarg);
+			if (access(optarg, R_OK) < 0)
+				die("error: config file '%s' is not readable (permission denied)", optarg);
 			custom_cfg_path = optarg;
 			break;
+		}
 		case 's':
 			startup_cmd = optarg;
 			break;
