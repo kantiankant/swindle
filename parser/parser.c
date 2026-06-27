@@ -134,6 +134,47 @@ parse_modifier(const char *name)
 	return 0;
 }
 
+static uint32_t
+parse_keyname(const char *name)
+{
+	xkb_keysym_t sym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
+	if (sym != XKB_KEY_NoSymbol)
+		return sym;
+
+	if (!strcmp(name, "enter"))       return XKB_KEY_Return;
+	if (!strcmp(name, "space"))       return XKB_KEY_space;
+	if (!strcmp(name, "f1"))          return XKB_KEY_F1;
+	if (!strcmp(name, "f2"))          return XKB_KEY_F2;
+	if (!strcmp(name, "f3"))          return XKB_KEY_F3;
+	if (!strcmp(name, "f4"))          return XKB_KEY_F4;
+	if (!strcmp(name, "f5"))          return XKB_KEY_F5;
+	if (!strcmp(name, "f6"))          return XKB_KEY_F6;
+	if (!strcmp(name, "f7"))          return XKB_KEY_F7;
+	if (!strcmp(name, "f8"))          return XKB_KEY_F8;
+	if (!strcmp(name, "f9"))          return XKB_KEY_F9;
+	if (!strcmp(name, "f10"))         return XKB_KEY_F10;
+	if (!strcmp(name, "f11"))         return XKB_KEY_F11;
+	if (!strcmp(name, "f12"))         return XKB_KEY_F12;
+	if (!strcmp(name, "-"))           return XKB_KEY_minus;
+	if (!strcmp(name, "="))           return XKB_KEY_equal;
+	if (!strcmp(name, "backspace"))   return XKB_KEY_BackSpace;
+	if (!strcmp(name, "tab"))         return XKB_KEY_Tab;
+	if (!strcmp(name, "capslock"))    return XKB_KEY_Caps_Lock;
+	if (!strcmp(name, "printscreen")) return XKB_KEY_Print;
+	if (!strcmp(name, "pageup"))      return XKB_KEY_Page_Up;
+	if (!strcmp(name, "pagedown"))    return XKB_KEY_Page_Down;
+	if (!strcmp(name, "leftarrow"))   return XKB_KEY_Left;
+	if (!strcmp(name, "rightarrow"))  return XKB_KEY_Right;
+	if (!strcmp(name, "uparrow"))     return XKB_KEY_Up;
+	if (!strcmp(name, "downarrow"))   return XKB_KEY_Down;
+	if (!strcmp(name, "home"))        return XKB_KEY_Home;
+	if (!strcmp(name, "end"))         return XKB_KEY_End;
+	if (!strcmp(name, "insert"))      return XKB_KEY_Insert;
+	if (!strcmp(name, "delete"))      return XKB_KEY_Delete;
+
+	return XKB_KEY_NoSymbol;
+}
+
 /* Section parsers */
 
 static void
@@ -343,7 +384,7 @@ parse_keybinds(lua_State *L, Config *cfg)
 		/* key: string keysym name, e.g. "q", "Return", "XF86AudioMute" */
 		char keyname[CFG_MAX_STRLEN] = {0};
 		lua_get_string(L, "key", keyname, sizeof(keyname));
-		kb->key = xkb_keysym_from_name(keyname, XKB_KEYSYM_CASE_INSENSITIVE);
+		kb->key = parse_keyname(keyname);
 		if (kb->key == XKB_KEY_NoSymbol) {
 			fprintf(stderr, "swindle config: unknown key '%s', skipping bind\n",
 			        keyname);
@@ -742,6 +783,8 @@ watch_dispatch(int fd, uint32_t mask, void *data)
 	 * which removes our watch (which is a pain in the ass. 
 	 * Hence, re-add it defensively. It's good for the soul)
 	 */
+
+  // specter here. what??? :sob:
 	inotify_rm_watch(ws->inotify_fd, ws->watch_fd);
 	ws->watch_fd = inotify_add_watch(ws->inotify_fd, ws->path,
 	                                  IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE);

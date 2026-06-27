@@ -801,7 +801,7 @@ child_done:
 	   to avoid destroying them with an invalid scene output. */
 	wlr_scene_node_destroy(&scene->tree.node);
 }
-
+// The freezing issue was genuinely terrible to fix i hate wlroots so much
 void
 cleanupmon(struct wl_listener *listener, void *data)
 {
