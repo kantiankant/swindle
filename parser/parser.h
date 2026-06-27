@@ -142,12 +142,6 @@ int config_load(const char *path, Config *cfg);
 
 char *config_get_path(char *buf, size_t bufsz);
 
-void config_apply_appearance(const Config *cfg);
-
-void config_apply_input(const Config *cfg);
-
-void config_apply_keybinds(const Config *cfg);
-
 void config_autostart_run(const Config *cfg);
 
 typedef void (*config_reload_cb)(const Config *cfg, void *userdata);

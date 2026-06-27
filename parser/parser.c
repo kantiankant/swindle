@@ -31,7 +31,6 @@
 /* Forward declarations from src/swindle.c  */
 extern struct wl_list mons;   
 extern struct wl_list clients; 
-void arrange(void *m);       
 
 /* Internal watcher state */
 
@@ -357,7 +356,6 @@ parse_keybinds(lua_State *L, Config *cfg)
 	}
 
 	cfg->nkeybinds = 0;
-	struct xkb_context *xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
 	int n = (int)lua_rawlen(L, -1);
 	for (int i = 1; i <= n && cfg->nkeybinds < CFG_MAX_KEYBINDS; i++) {
@@ -414,7 +412,6 @@ parse_keybinds(lua_State *L, Config *cfg)
 		lua_pop(L, 1); /* keybind entry */
 	}
 
-	xkb_context_unref(xkb_ctx);
 	lua_pop(L, 1); /* keybinds table */
 }
 
@@ -660,26 +657,6 @@ config_load(const char *path, Config *cfg)
 	return 0;
 }
 
-/* Apply functions */
-
-void
-config_apply_appearance(const Config *cfg)
-{
-	(void)cfg;
-}
-
-void
-config_apply_input(const Config *cfg)
-{
-	(void)cfg;
-}
-
-void
-config_apply_keybinds(const Config *cfg)
-{
-	(void)cfg;
-}
-
 void
 config_autostart_run(const Config *cfg)
 {
@@ -784,7 +761,6 @@ watch_dispatch(int fd, uint32_t mask, void *data)
 	 * Hence, re-add it defensively. It's good for the soul)
 	 */
 
-  // specter here. what??? :sob:
 	inotify_rm_watch(ws->inotify_fd, ws->watch_fd);
 	ws->watch_fd = inotify_add_watch(ws->inotify_fd, ws->path,
 	                                  IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE);

@@ -223,7 +223,6 @@ struct Monitor {
 	unsigned int sellt;
 	uint32_t tagset[2];
 	float mfact;
-	int gamma_lut_changed;
 	int nmaster;
 	char ltsymbol[16];
 	int asleep;
@@ -805,7 +804,7 @@ child_done:
 	   to avoid destroying them with an invalid scene output. */
 	wlr_scene_node_destroy(&scene->tree.node);
 }
-// The freezing issue was genuinely terrible to fix i hate wlroots so much
+
 void
 cleanupmon(struct wl_listener *listener, void *data)
 {
@@ -895,11 +894,12 @@ closemon(Monitor *m)
 	}
 
 	wl_list_for_each(c, &clients, link) {
-		if (c->isfloating && c->geom.x > m->m.width)
-			resize(c, (struct wlr_box){.x = c->geom.x - m->w.width, .y = c->geom.y,
-					.width = c->geom.width, .height = c->geom.height}, 0);
-		if (c->mon == m)
+		if (c->mon == m) {
+			if (c->isfloating && c->geom.x > m->m.width)
+				resize(c, (struct wlr_box){.x = c->geom.x - m->w.width, .y = c->geom.y,
+						.width = c->geom.width, .height = c->geom.height}, 0);
 			setmon(c, selmon, c->tags);
+		}
 	}
 	focusclient(focustop(selmon), 1);
 	printstatus();
@@ -2382,13 +2382,13 @@ void
 powermgrsetmode(struct wl_listener *listener, void *data)
 {
 	struct wlr_output_power_v1_set_mode_event *event = data;
-	struct wlr_output_state state = {0};
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
 	Monitor *m = event->output->data;
 
 	if (!m)
 		return;
 
-	m->gamma_lut_changed = 1; /* Reapply gamma LUT when re-enabling the output */
 	wlr_output_state_set_enabled(&state, event->mode);
 	wlr_output_commit_state(m->wlr_output, &state);
 
@@ -3190,10 +3190,11 @@ dwindle_remove(DwindleNode **root, Client *c)
 static void
 dwindle_remove_client(Client *c)
 {
-	Monitor *m;
-	wl_list_for_each(m, &mons, link)
-		for (int i = 0; i < TAGCOUNT; i++)
-			dwindle_remove(&m->dwindle_root[i], c);
+	Monitor *m = c->mon;
+	if (!m)
+		return;
+	for (int i = 0; i < TAGCOUNT; i++)
+		dwindle_remove(&m->dwindle_root[i], c);
 }
 
 /* layout entry point */
@@ -3550,10 +3551,6 @@ updatemons(struct wl_listener *listener, void *data)
 		/* make sure fullscreen clients have the right size */
 		if ((c = focustop(m)) && c->isfullscreen)
 			resize(c, m->m, 0);
-
-		/* Try to re-set the gamma LUT when updating monitors,
-		 * it's only really needed when enabling a disabled output, but meh. */
-		m->gamma_lut_changed = 1;
 
 		config_head->state.x = m->m.x;
 		config_head->state.y = m->m.y;
