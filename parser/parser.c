@@ -437,6 +437,90 @@ parse_buttons(lua_State *L, Config *cfg)
 	lua_pop(L, 1);
 }
 
+static int
+parse_scroll_source(const char *str)
+{
+	if (!str || !str[0]) return -1;
+	if (!strcmp(str, "wheel"))      return 0; /* WL_POINTER_AXIS_SOURCE_WHEEL */
+	if (!strcmp(str, "finger"))     return 1; /* WL_POINTER_AXIS_SOURCE_FINGER */
+	if (!strcmp(str, "continuous")) return 2; /* WL_POINTER_AXIS_SOURCE_CONTINUOUS */
+	if (!strcmp(str, "tilt"))       return 3; /* WL_POINTER_AXIS_SOURCE_WHEEL_TILT */
+	return -1;
+}
+
+static int
+parse_scroll_orientation(const char *str)
+{
+	if (!str || !str[0]) return -1;
+	if (!strcmp(str, "vertical"))   return 0; /* WL_POINTER_AXIS_VERTICAL_SCROLL */
+	if (!strcmp(str, "horizontal")) return 1; /* WL_POINTER_AXIS_HORIZONTAL_SCROLL */
+	return -1;
+}
+
+static void
+parse_scrolls(lua_State *L, Config *cfg)
+{
+	lua_getglobal(L, "scrolls");
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+
+	cfg->nscrolls = 0;
+	int n = (int)lua_rawlen(L, -1);
+	for (int i = 1; i <= n && cfg->nscrolls < CFG_MAX_KEYBINDS; i++) {
+		lua_rawgeti(L, -1, i);
+		if (!lua_istable(L, -1)) { lua_pop(L, 1); continue; }
+
+		CfgScroll *s = &cfg->scrolls[cfg->nscrolls];
+		memset(s, 0, sizeof(*s));
+		s->source = -1;
+		s->orientation = -1;
+
+		s->mods = 0;
+		lua_getfield(L, -1, "mods");
+		if (lua_istable(L, -1)) {
+			int nm = (int)lua_rawlen(L, -1);
+			for (int m = 1; m <= nm; m++) {
+				lua_rawgeti(L, -1, m);
+				if (lua_isstring(L, -1))
+					s->mods |= parse_modifier(lua_tostring(L, -1));
+				lua_pop(L, 1);
+			}
+		}
+		lua_pop(L, 1);
+
+		char buf[CFG_MAX_STRLEN] = {0};
+		lua_get_string(L, "source", buf, sizeof(buf));
+		s->source = parse_scroll_source(buf);
+
+		memset(buf, 0, sizeof(buf));
+		lua_get_string(L, "orientation", buf, sizeof(buf));
+		s->orientation = parse_scroll_orientation(buf);
+
+		lua_get_string(L, "action", s->action, sizeof(s->action));
+
+		s->nargs = 0;
+		lua_getfield(L, -1, "args");
+		if (lua_istable(L, -1)) {
+			int na = (int)lua_rawlen(L, -1);
+			for (int a = 1; a <= na && s->nargs < CFG_MAX_ARGS; a++) {
+				lua_rawgeti(L, -1, a);
+				if (lua_isstring(L, -1))
+					strncpy(s->args[s->nargs++],
+					        lua_tostring(L, -1),
+					        CFG_MAX_STRLEN - 1);
+				lua_pop(L, 1);
+			}
+		}
+		lua_pop(L, 1); /* args */
+
+		cfg->nscrolls++;
+		lua_pop(L, 1); /* scroll entry */
+	}
+	lua_pop(L, 1); /* scrolls table */
+}
+
 static void
 parse_autostart(lua_State *L, Config *cfg)
 {
@@ -528,6 +612,7 @@ config_load(const char *path, Config *cfg)
 	parse_monitors  (L, cfg);
 	parse_keybinds  (L, cfg);
 	parse_buttons   (L, cfg);
+	parse_scrolls   (L, cfg);
 	parse_autostart (L, cfg);
 
 	lua_close(L);

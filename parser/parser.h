@@ -89,6 +89,17 @@ typedef struct {
 	int      nargs;
 } CfgButton;
 
+/* Scroll axis bindings (trackpad vs mouse wheel) */
+
+typedef struct {
+	uint32_t mods;
+	int      source;         /* -1 = any, or WL_POINTER_AXIS_SOURCE_* */
+	int      orientation;    /* -1 = any, or WL_POINTER_AXIS_* */
+	char     action[CFG_MAX_STRLEN];
+	char     args[CFG_MAX_ARGS][CFG_MAX_STRLEN];
+	int      nargs;
+} CfgScroll;
+
 /* Autostart */
 
 typedef struct {
@@ -113,6 +124,9 @@ typedef struct {
 
 	CfgButton     buttons[CFG_MAX_KEYBINDS];
 	int           nbuttons;
+
+	CfgScroll     scrolls[CFG_MAX_KEYBINDS];
+	int           nscrolls;
 
 	bool          sloppyfocus;
 	bool          bypass_surface_visibility;

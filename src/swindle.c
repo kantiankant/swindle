@@ -636,19 +636,36 @@ arrangelayers(Monitor *m)
 	}
 }
 
+static void dispatch_action(const char *action, const char (*args)[CFG_MAX_STRLEN], int nargs);
+
 void
 axisnotify(struct wl_listener *listener, void *data)
 {
 	/* This event is forwarded by the cursor when a pointer emits an axis event,
 	 * for example when you move the scroll wheel. */
 	struct wlr_pointer_axis_event *event = data;
+
+	/* Check scroll bindings first (trackpad vs mouse wheel separation) */
+	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
+	uint32_t mods = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
+
+	for (int i = 0; i < cfg.nscrolls; i++) {
+		const CfgScroll *s = &cfg.scrolls[i];
+		if (CLEANMASK(mods) == CLEANMASK(s->mods)
+				&& (s->source == -1 || s->source == (int)event->source)
+				&& (s->orientation == -1 || s->orientation == (int)event->orientation)) {
+			if (s->action[0] == '\0')
+				break;
+			dispatch_action(s->action, s->args, s->nargs);
+			return;
+		}
+	}
+
 	wlr_idle_notifier_v1_notify_activity(idle_notifier, seat);
 	wlr_seat_pointer_notify_axis(seat,
 			event->time_msec, event->orientation, event->delta,
 			event->delta_discrete, event->source, event->relative_direction);
 }
-
-static void dispatch_action(const char *action, const char (*args)[CFG_MAX_STRLEN], int nargs);
 
 void
 buttonpress(struct wl_listener *listener, void *data)
