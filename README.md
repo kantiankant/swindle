@@ -44,7 +44,7 @@ start swindle because it (swindle) won't start without it
 
 ## Checklist
 
-- [ ] separate the trackpad scroll from the mousee scroll 
+- [x] separate the trackpad scroll from the mousee scroll 
 - [ ] Add ability to change your keymap
 - [ ] Add animations via [scenefx](https://github.com/wlrfx/scenefx) when 0.5 drops (in another branch)
 - [x] Add the ability for the compositor to read a custom path for configs
