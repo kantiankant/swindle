@@ -766,23 +766,36 @@ cleanup(void)
 	config_watch_stop(cfg_watch_src);
 	cfg_watch_src = NULL;
 	cleanuplisteners();
+
+	/* Destroy keyboard group before backend to work around a
+	 * wlroots use-after-free of wlr_seat. */
+	destroykeyboardgroup(&kb_group->destroy, NULL);
+
+	/* Destroy backend FIRST to release the DRM master and VT,
+	 * so the user can switch TTYs even if later cleanup hangs
+	 * (e.g. XWayland or client destruction). */
+	wlr_backend_destroy(backend);
+
 #ifdef XWAYLAND
 	wlr_xwayland_destroy(xwayland);
 	xwayland = NULL;
 #endif
+
 	wl_display_destroy_clients(dpy);
 	if (child_pid > 0) {
 		kill(-child_pid, SIGTERM);
+		close(STDOUT_FILENO);
+		struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 };
+		for (int i = 0; i < 50; i++) {
+			if (waitpid(child_pid, NULL, WNOHANG) == child_pid)
+				goto child_done;
+			nanosleep(&ts, NULL);
+		}
+		kill(-child_pid, SIGKILL);
 		waitpid(child_pid, NULL, 0);
 	}
+child_done:
 	wlr_xcursor_manager_destroy(cursor_mgr);
-
-	destroykeyboardgroup(&kb_group->destroy, NULL);
-
-	/* If it's not destroyed manually, it will cause a use-after-free of wlr_seat.
-	 * Destroy it until it's fixed on the wlroots side */
-	wlr_backend_destroy(backend);
-
 	wl_display_destroy(dpy);
 	/* Destroy after the wayland display (when the monitors are already destroyed)
 	   to avoid destroying them with an invalid scene output. */
