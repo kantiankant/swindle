@@ -9,7 +9,7 @@ Swindle is a fork of [dwl](https://codeeberg.org/dwl/dwl) that was designed from
 
 * NO cool vfx
 * nearly NO documentation
-* ZERO good original code
+* almost ZERO good original code
 * only ONE tiling layout (dwindle)
  
 > Fun fact: I actually took some parts of [MangoWM](https://github.com/mangowm/mango) (such as the ext-workspaces implementation). hence why the LICENSE.mangowm exists
@@ -44,11 +44,11 @@ start swindle because it (swindle) won't start without it
 
 ## Checklist
 
-- [ ] separate the trackpad scroll from the mousee scroll 
+- [x] separate the trackpad scroll from the mousee scroll 
 - [ ] Add ability to change your keymap
 - [ ] Add animations via [scenefx](https://github.com/wlrfx/scenefx) when 0.5 drops (in another branch)
-- [ ] Add the ability for the compositor to read a custom path for configs
-- [ ] Add /etc/swindle/config.lua as a fallback path if $HOME/.config/swindle/config.lua is not found 
+- [x] Add the ability for the compositor to read a custom path for configs
+- [x] Add /etc/swindle/config.lua as a fallback path if $HOME/.config/swindle/config.lua is not found 
 
 
 ## License

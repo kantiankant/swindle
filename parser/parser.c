@@ -31,7 +31,6 @@
 /* Forward declarations from src/swindle.c  */
 extern struct wl_list mons;   
 extern struct wl_list clients; 
-void arrange(void *m);       
 
 /* Internal watcher state */
 
@@ -132,6 +131,47 @@ parse_modifier(const char *name)
 	if (!strcmp(name, "mod5"))  return WLR_MODIFIER_MOD5;
 	fprintf(stderr, "swindle config: unknown modifier '%s', ignoring\n", name);
 	return 0;
+}
+
+static uint32_t
+parse_keyname(const char *name)
+{
+	xkb_keysym_t sym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
+	if (sym != XKB_KEY_NoSymbol)
+		return sym;
+
+	if (!strcmp(name, "enter"))       return XKB_KEY_Return;
+	if (!strcmp(name, "space"))       return XKB_KEY_space;
+	if (!strcmp(name, "f1"))          return XKB_KEY_F1;
+	if (!strcmp(name, "f2"))          return XKB_KEY_F2;
+	if (!strcmp(name, "f3"))          return XKB_KEY_F3;
+	if (!strcmp(name, "f4"))          return XKB_KEY_F4;
+	if (!strcmp(name, "f5"))          return XKB_KEY_F5;
+	if (!strcmp(name, "f6"))          return XKB_KEY_F6;
+	if (!strcmp(name, "f7"))          return XKB_KEY_F7;
+	if (!strcmp(name, "f8"))          return XKB_KEY_F8;
+	if (!strcmp(name, "f9"))          return XKB_KEY_F9;
+	if (!strcmp(name, "f10"))         return XKB_KEY_F10;
+	if (!strcmp(name, "f11"))         return XKB_KEY_F11;
+	if (!strcmp(name, "f12"))         return XKB_KEY_F12;
+	if (!strcmp(name, "-"))           return XKB_KEY_minus;
+	if (!strcmp(name, "="))           return XKB_KEY_equal;
+	if (!strcmp(name, "backspace"))   return XKB_KEY_BackSpace;
+	if (!strcmp(name, "tab"))         return XKB_KEY_Tab;
+	if (!strcmp(name, "capslock"))    return XKB_KEY_Caps_Lock;
+	if (!strcmp(name, "printscreen")) return XKB_KEY_Print;
+	if (!strcmp(name, "pageup"))      return XKB_KEY_Page_Up;
+	if (!strcmp(name, "pagedown"))    return XKB_KEY_Page_Down;
+	if (!strcmp(name, "leftarrow"))   return XKB_KEY_Left;
+	if (!strcmp(name, "rightarrow"))  return XKB_KEY_Right;
+	if (!strcmp(name, "uparrow"))     return XKB_KEY_Up;
+	if (!strcmp(name, "downarrow"))   return XKB_KEY_Down;
+	if (!strcmp(name, "home"))        return XKB_KEY_Home;
+	if (!strcmp(name, "end"))         return XKB_KEY_End;
+	if (!strcmp(name, "insert"))      return XKB_KEY_Insert;
+	if (!strcmp(name, "delete"))      return XKB_KEY_Delete;
+
+	return XKB_KEY_NoSymbol;
 }
 
 /* Section parsers */
@@ -316,7 +356,6 @@ parse_keybinds(lua_State *L, Config *cfg)
 	}
 
 	cfg->nkeybinds = 0;
-	struct xkb_context *xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
 	int n = (int)lua_rawlen(L, -1);
 	for (int i = 1; i <= n && cfg->nkeybinds < CFG_MAX_KEYBINDS; i++) {
@@ -343,7 +382,7 @@ parse_keybinds(lua_State *L, Config *cfg)
 		/* key: string keysym name, e.g. "q", "Return", "XF86AudioMute" */
 		char keyname[CFG_MAX_STRLEN] = {0};
 		lua_get_string(L, "key", keyname, sizeof(keyname));
-		kb->key = xkb_keysym_from_name(keyname, XKB_KEYSYM_CASE_INSENSITIVE);
+		kb->key = parse_keyname(keyname);
 		if (kb->key == XKB_KEY_NoSymbol) {
 			fprintf(stderr, "swindle config: unknown key '%s', skipping bind\n",
 			        keyname);
@@ -373,7 +412,6 @@ parse_keybinds(lua_State *L, Config *cfg)
 		lua_pop(L, 1); /* keybind entry */
 	}
 
-	xkb_context_unref(xkb_ctx);
 	lua_pop(L, 1); /* keybinds table */
 }
 
@@ -437,6 +475,90 @@ parse_buttons(lua_State *L, Config *cfg)
 	lua_pop(L, 1);
 }
 
+static int
+parse_scroll_source(const char *str)
+{
+	if (!str || !str[0]) return -1;
+	if (!strcmp(str, "wheel"))      return 0; /* WL_POINTER_AXIS_SOURCE_WHEEL */
+	if (!strcmp(str, "finger"))     return 1; /* WL_POINTER_AXIS_SOURCE_FINGER */
+	if (!strcmp(str, "continuous")) return 2; /* WL_POINTER_AXIS_SOURCE_CONTINUOUS */
+	if (!strcmp(str, "tilt"))       return 3; /* WL_POINTER_AXIS_SOURCE_WHEEL_TILT */
+	return -1;
+}
+
+static int
+parse_scroll_orientation(const char *str)
+{
+	if (!str || !str[0]) return -1;
+	if (!strcmp(str, "vertical"))   return 0; /* WL_POINTER_AXIS_VERTICAL_SCROLL */
+	if (!strcmp(str, "horizontal")) return 1; /* WL_POINTER_AXIS_HORIZONTAL_SCROLL */
+	return -1;
+}
+
+static void
+parse_scrolls(lua_State *L, Config *cfg)
+{
+	lua_getglobal(L, "scrolls");
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+
+	cfg->nscrolls = 0;
+	int n = (int)lua_rawlen(L, -1);
+	for (int i = 1; i <= n && cfg->nscrolls < CFG_MAX_KEYBINDS; i++) {
+		lua_rawgeti(L, -1, i);
+		if (!lua_istable(L, -1)) { lua_pop(L, 1); continue; }
+
+		CfgScroll *s = &cfg->scrolls[cfg->nscrolls];
+		memset(s, 0, sizeof(*s));
+		s->source = -1;
+		s->orientation = -1;
+
+		s->mods = 0;
+		lua_getfield(L, -1, "mods");
+		if (lua_istable(L, -1)) {
+			int nm = (int)lua_rawlen(L, -1);
+			for (int m = 1; m <= nm; m++) {
+				lua_rawgeti(L, -1, m);
+				if (lua_isstring(L, -1))
+					s->mods |= parse_modifier(lua_tostring(L, -1));
+				lua_pop(L, 1);
+			}
+		}
+		lua_pop(L, 1);
+
+		char buf[CFG_MAX_STRLEN] = {0};
+		lua_get_string(L, "source", buf, sizeof(buf));
+		s->source = parse_scroll_source(buf);
+
+		memset(buf, 0, sizeof(buf));
+		lua_get_string(L, "orientation", buf, sizeof(buf));
+		s->orientation = parse_scroll_orientation(buf);
+
+		lua_get_string(L, "action", s->action, sizeof(s->action));
+
+		s->nargs = 0;
+		lua_getfield(L, -1, "args");
+		if (lua_istable(L, -1)) {
+			int na = (int)lua_rawlen(L, -1);
+			for (int a = 1; a <= na && s->nargs < CFG_MAX_ARGS; a++) {
+				lua_rawgeti(L, -1, a);
+				if (lua_isstring(L, -1))
+					strncpy(s->args[s->nargs++],
+					        lua_tostring(L, -1),
+					        CFG_MAX_STRLEN - 1);
+				lua_pop(L, 1);
+			}
+		}
+		lua_pop(L, 1); /* args */
+
+		cfg->nscrolls++;
+		lua_pop(L, 1); /* scroll entry */
+	}
+	lua_pop(L, 1); /* scrolls table */
+}
+
 static void
 parse_autostart(lua_State *L, Config *cfg)
 {
@@ -476,6 +598,8 @@ config_get_path(char *buf, size_t bufsz)
 		if (!home) home = "/root"; /* you're probably root, aren't you */
 		snprintf(buf, bufsz, "%s/.config/swindle/config.lua", home);
 	}
+	if (access(buf, F_OK) != 0)
+		snprintf(buf, bufsz, "/etc/swindle/config.lua");
 	return buf;
 }
 
@@ -526,30 +650,11 @@ config_load(const char *path, Config *cfg)
 	parse_monitors  (L, cfg);
 	parse_keybinds  (L, cfg);
 	parse_buttons   (L, cfg);
+	parse_scrolls   (L, cfg);
 	parse_autostart (L, cfg);
 
 	lua_close(L);
 	return 0;
-}
-
-/* Apply functions */
-
-void
-config_apply_appearance(const Config *cfg)
-{
-	(void)cfg;
-}
-
-void
-config_apply_input(const Config *cfg)
-{
-	(void)cfg;
-}
-
-void
-config_apply_keybinds(const Config *cfg)
-{
-	(void)cfg;
 }
 
 void
@@ -655,6 +760,7 @@ watch_dispatch(int fd, uint32_t mask, void *data)
 	 * which removes our watch (which is a pain in the ass. 
 	 * Hence, re-add it defensively. It's good for the soul)
 	 */
+
 	inotify_rm_watch(ws->inotify_fd, ws->watch_fd);
 	ws->watch_fd = inotify_add_watch(ws->inotify_fd, ws->path,
 	                                  IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE);

@@ -141,6 +141,7 @@ ipc_output_handle_set_tags(struct wl_client *client, struct wl_resource *resourc
 		uint32_t tagmask, uint32_t toggle_tagset)
 {
 	IpcOutput *out = wl_resource_get_user_data(resource);
+	if (!out) return;
 	Monitor *m = out->mon;
 	if (!m) return;
 
@@ -157,6 +158,7 @@ ipc_output_handle_set_client_tags(struct wl_client *client,
 		struct wl_resource *resource, uint32_t and_tags, uint32_t xor_tags)
 {
 	IpcOutput *out = wl_resource_get_user_data(resource);
+	if (!out) return;
 	Monitor *m = out->mon;
 	Client *sel;
 	uint32_t newtags;
@@ -178,6 +180,7 @@ ipc_output_handle_set_layout(struct wl_client *client,
 		struct wl_resource *resource, uint32_t idx)
 {
 	IpcOutput *out = wl_resource_get_user_data(resource);
+	if (!out) return;
 	Monitor *m = out->mon;
 	if (!m || idx >= LENGTH(layouts)) return;
 

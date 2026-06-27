@@ -223,7 +223,6 @@ struct Monitor {
 	unsigned int sellt;
 	uint32_t tagset[2];
 	float mfact;
-	int gamma_lut_changed;
 	int nmaster;
 	char ltsymbol[16];
 	int asleep;
@@ -636,19 +635,36 @@ arrangelayers(Monitor *m)
 	}
 }
 
+static void dispatch_action(const char *action, const char (*args)[CFG_MAX_STRLEN], int nargs);
+
 void
 axisnotify(struct wl_listener *listener, void *data)
 {
 	/* This event is forwarded by the cursor when a pointer emits an axis event,
 	 * for example when you move the scroll wheel. */
 	struct wlr_pointer_axis_event *event = data;
+
+	/* Check scroll bindings first (trackpad vs mouse wheel separation) */
+	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
+	uint32_t mods = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
+
+	for (int i = 0; i < cfg.nscrolls; i++) {
+		const CfgScroll *s = &cfg.scrolls[i];
+		if (CLEANMASK(mods) == CLEANMASK(s->mods)
+				&& (s->source == -1 || s->source == (int)event->source)
+				&& (s->orientation == -1 || s->orientation == (int)event->orientation)) {
+			if (s->action[0] == '\0')
+				break;
+			dispatch_action(s->action, s->args, s->nargs);
+			return;
+		}
+	}
+
 	wlr_idle_notifier_v1_notify_activity(idle_notifier, seat);
 	wlr_seat_pointer_notify_axis(seat,
 			event->time_msec, event->orientation, event->delta,
 			event->delta_discrete, event->source, event->relative_direction);
 }
-
-static void dispatch_action(const char *action, const char (*args)[CFG_MAX_STRLEN], int nargs);
 
 void
 buttonpress(struct wl_listener *listener, void *data)
@@ -749,15 +765,32 @@ cleanup(void)
 	config_watch_stop(cfg_watch_src);
 	cfg_watch_src = NULL;
 	cleanuplisteners();
+
 #ifdef XWAYLAND
+	/* SIGKILL XWayland first so the internal waitpid in
+	 * wlr_xwayland_destroy can't block. */
+	if (xwayland && xwayland->server && xwayland->server->pid > 0)
+		kill(xwayland->server->pid, SIGKILL);
 	wlr_xwayland_destroy(xwayland);
 	xwayland = NULL;
 #endif
+
 	wl_display_destroy_clients(dpy);
 	if (child_pid > 0) {
 		kill(-child_pid, SIGTERM);
+		close(STDOUT_FILENO);
+		struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 };
+		int ret;
+		for (int i = 0; i < 50; i++) {
+			ret = waitpid(child_pid, NULL, WNOHANG);
+			if (ret == child_pid || ret == -1)
+				goto child_done;
+			nanosleep(&ts, NULL);
+		}
+		kill(-child_pid, SIGKILL);
 		waitpid(child_pid, NULL, 0);
 	}
+child_done:
 	wlr_xcursor_manager_destroy(cursor_mgr);
 
 	destroykeyboardgroup(&kb_group->destroy, NULL);
@@ -861,11 +894,12 @@ closemon(Monitor *m)
 	}
 
 	wl_list_for_each(c, &clients, link) {
-		if (c->isfloating && c->geom.x > m->m.width)
-			resize(c, (struct wlr_box){.x = c->geom.x - m->w.width, .y = c->geom.y,
-					.width = c->geom.width, .height = c->geom.height}, 0);
-		if (c->mon == m)
+		if (c->mon == m) {
+			if (c->isfloating && c->geom.x > m->m.width)
+				resize(c, (struct wlr_box){.x = c->geom.x - m->w.width, .y = c->geom.y,
+						.width = c->geom.width, .height = c->geom.height}, 0);
 			setmon(c, selmon, c->tags);
+		}
 	}
 	focusclient(focustop(selmon), 1);
 	printstatus();
@@ -2348,13 +2382,13 @@ void
 powermgrsetmode(struct wl_listener *listener, void *data)
 {
 	struct wlr_output_power_v1_set_mode_event *event = data;
-	struct wlr_output_state state = {0};
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
 	Monitor *m = event->output->data;
 
 	if (!m)
 		return;
 
-	m->gamma_lut_changed = 1; /* Reapply gamma LUT when re-enabling the output */
 	wlr_output_state_set_enabled(&state, event->mode);
 	wlr_output_commit_state(m->wlr_output, &state);
 
@@ -3156,10 +3190,11 @@ dwindle_remove(DwindleNode **root, Client *c)
 static void
 dwindle_remove_client(Client *c)
 {
-	Monitor *m;
-	wl_list_for_each(m, &mons, link)
-		for (int i = 0; i < TAGCOUNT; i++)
-			dwindle_remove(&m->dwindle_root[i], c);
+	Monitor *m = c->mon;
+	if (!m)
+		return;
+	for (int i = 0; i < TAGCOUNT; i++)
+		dwindle_remove(&m->dwindle_root[i], c);
 }
 
 /* layout entry point */
@@ -3516,10 +3551,6 @@ updatemons(struct wl_listener *listener, void *data)
 		/* make sure fullscreen clients have the right size */
 		if ((c = focustop(m)) && c->isfullscreen)
 			resize(c, m->m, 0);
-
-		/* Try to re-set the gamma LUT when updating monitors,
-		 * it's only really needed when enabling a disabled output, but meh. */
-		m->gamma_lut_changed = 1;
 
 		config_head->state.x = m->m.x;
 		config_head->state.y = m->m.y;
