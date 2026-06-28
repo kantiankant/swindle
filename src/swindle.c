@@ -1627,20 +1627,26 @@ void focusdir(const Arg *arg) {
     }
 
     if (arg->i == WLR_DIRECTION_DOWN || arg->i == WLR_DIRECTION_RIGHT) {
-      if (next)
+      if (next) {
         focusclient(next, 1);
-      else if (first)
+        arrange(selmon);
+      } else if (first) {
         focusclient(first, 1);
+        arrange(selmon);
+      }
     } else {
-      if (prev)
+      if (prev) {
         focusclient(prev, 1);
-      else {
+        arrange(selmon);
+      } else {
         /* wrap to last */
-        wl_list_for_each(c, &clients, link)
-          if (VISIBLEON(c, selmon) && !c->isfloating && !c->isfullscreen)
-            prev = c;
-        if (prev)
+        wl_list_for_each(c, &clients, link) if (VISIBLEON(c, selmon) &&
+                                                !c->isfloating &&
+                                                !c->isfullscreen) prev = c;
+        if (prev) {
           focusclient(prev, 1);
+          arrange(selmon);
+        }
       }
     }
     return;
@@ -3417,7 +3423,6 @@ void master(Monitor *m) {
   int ti = current_tag_idx(m);
   master_arrange(m, ti);
 }
-
 void
 monocle(Monitor *m) {
   Client *c, *sel = focustop(m);
@@ -3437,15 +3442,18 @@ monocle(Monitor *m) {
   int aw = MAX(1, m->w.width - 2 * e);
   int ah = MAX(1, m->w.height - 2 * e);
 
+  /* Stack all windows at the same position and raise the focused one to top */
   wl_list_for_each(c, &clients, link) {
     if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
       continue;
     resize(c, (struct wlr_box){m->w.x + e, m->w.y + e, aw, ah}, 0);
-    if (c != sel)
-      wlr_scene_node_set_enabled(&c->scene->node, 0);
+    wlr_scene_node_set_enabled(&c->scene->node, 0);
+  }
+  if (sel) {
+    wlr_scene_node_set_enabled(&sel->scene->node, 1);
+    wlr_scene_node_raise_to_top(&sel->scene->node);
   }
 }
-
 /* Clear master references to client c on all tags of its monitor */
 
 static void master_remove_client(Client *c) {
