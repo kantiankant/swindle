@@ -382,6 +382,7 @@ static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void dwindle(Monitor *m);
 static void master(Monitor *m);
+static void monocle(Monitor *m);
 static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void togglegaps(const Arg *arg);
@@ -1592,7 +1593,9 @@ static void client_center(Client *c, int *cx, int *cy) {
 /* focusdir is basically spatial focus in a cardinal direction.
  * arg->i: WLR_DIRECTION_LEFT, RIGHT, UP, DOWN.
  * It finds the nearest tiled visible client whose centre lies in the
- * requested half-plane relative to the focused client's centre */
+ * requested half-plane relative to the focused client's centre
+ *
+ * In monocle layout, this cycles through clients instead. */
 void focusdir(const Arg *arg) {
   Client *c, *best = NULL;
   Client *sel = focustop(selmon);
@@ -1601,6 +1604,47 @@ void focusdir(const Arg *arg) {
 
   if (!sel || (sel->isfullscreen && !client_has_children(sel)))
     return;
+
+  /* In monocle layout, cycle through clients in order */
+  if (selmon->lt[selmon->sellt]->arrange == monocle) {
+    Client *first = NULL, *next = NULL, *prev = NULL;
+    int found = 0;
+
+    wl_list_for_each(c, &clients, link) {
+      if (!VISIBLEON(c, selmon) || c->isfloating || c->isfullscreen)
+        continue;
+      if (!first)
+        first = c;
+      if (found) {
+        next = c;
+        break;
+      }
+      if (c == sel) {
+        found = 1;
+        continue;
+      }
+      prev = c;
+    }
+
+    if (arg->i == WLR_DIRECTION_DOWN || arg->i == WLR_DIRECTION_RIGHT) {
+      if (next)
+        focusclient(next, 1);
+      else if (first)
+        focusclient(first, 1);
+    } else {
+      if (prev)
+        focusclient(prev, 1);
+      else {
+        /* wrap to last */
+        wl_list_for_each(c, &clients, link)
+          if (VISIBLEON(c, selmon) && !c->isfloating && !c->isfullscreen)
+            prev = c;
+        if (prev)
+          focusclient(prev, 1);
+      }
+    }
+    return;
+  }
 
   client_center(sel, &sx, &sy);
 
@@ -1835,6 +1879,11 @@ static void dispatch_action(const char *action,
   }
   if (!strcmp(action, "setlayout_master")) {
     arg.ui = 2;
+    setlayout(&arg);
+    return;
+  }
+  if (!strcmp(action, "setlayout_monocle")) {
+    arg.ui = 3;
     setlayout(&arg);
     return;
   }
@@ -3367,6 +3416,34 @@ static void master_arrange(Monitor *m, int ti) {
 void master(Monitor *m) {
   int ti = current_tag_idx(m);
   master_arrange(m, ti);
+}
+
+void
+monocle(Monitor *m) {
+  Client *c, *sel = focustop(m);
+  int n = 0, e;
+
+  wl_list_for_each(c, &clients, link)
+    if (VISIBLEON(c, m) && !c->isfloating && !c->isfullscreen)
+      n++;
+
+  if (n == 0)
+    return;
+
+  e = (m->gaps && !(cfg.appearance.smart_gaps && n == 1))
+          ? (int)cfg.appearance.gaps
+          : 0;
+
+  int aw = MAX(1, m->w.width - 2 * e);
+  int ah = MAX(1, m->w.height - 2 * e);
+
+  wl_list_for_each(c, &clients, link) {
+    if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
+      continue;
+    resize(c, (struct wlr_box){m->w.x + e, m->w.y + e, aw, ah}, 0);
+    if (c != sel)
+      wlr_scene_node_set_enabled(&c->scene->node, 0);
+  }
 }
 
 /* Clear master references to client c on all tags of its monitor */
