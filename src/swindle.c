@@ -3344,17 +3344,17 @@ void dwindle(Monitor *m) {
 }
 
 /* master/stack layout */
-
 static void master_arrange(Monitor *m, int ti) {
   Client *c, *master_c = NULL;
   Client *stack[256];
   int nstack = 0, n = 0;
 
   wl_list_for_each(c, &clients, link) {
-    if (VISIBLEON(c, m) && !c->isfloating && !c->isfullscreen) {
-      n++;
+    if (VISIBLEON(c, m) && !c->isfloating) {
       if (c == m->master_master[ti])
         master_c = c;
+      if (!c->isfullscreen)
+        n++;
     }
   }
 
@@ -3384,7 +3384,8 @@ static void master_arrange(Monitor *m, int ti) {
   int ah = MAX(1, m->w.height - 2 * e);
 
   if (n == 1) {
-    resize(master_c, (struct wlr_box){m->w.x + e, m->w.y + e, aw, ah}, 0);
+    if (master_c && !master_c->isfullscreen)
+      resize(master_c, (struct wlr_box){m->w.x + e, m->w.y + e, aw, ah}, 0);
     return;
   }
 
@@ -3394,7 +3395,9 @@ static void master_arrange(Monitor *m, int ti) {
     int stack_x = m->w.x + e + master_w + e;
     int stack_w = MAX(1, aw - master_w - e);
 
-    resize(master_c, (struct wlr_box){m->w.x + e, m->w.y + e, master_w, ah}, 0);
+    if (master_c && !master_c->isfullscreen)
+      resize(master_c,
+             (struct wlr_box){m->w.x + e, m->w.y + e, master_w, ah}, 0);
 
     int sh = MAX(1, (ah - (nstack - 1) * e) / nstack);
     for (int i = 0; i < nstack; i++)
@@ -3411,9 +3414,10 @@ static void master_arrange(Monitor *m, int ti) {
           (struct wlr_box){m->w.x + e, m->w.y + e + i * (sh + e), stack_w, sh},
           0);
 
-    resize(master_c,
-           (struct wlr_box){m->w.x + e + stack_w + e, m->w.y + e, master_w, ah},
-           0);
+    if (master_c && !master_c->isfullscreen)
+      resize(master_c,
+             (struct wlr_box){m->w.x + e + stack_w + e, m->w.y + e, master_w, ah},
+             0);
   }
 }
 
