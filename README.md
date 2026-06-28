@@ -51,13 +51,13 @@ N/A
 
 ## Configuration
 
-read example/config.lua. It should give you a basic idea of how configuring swindle works.
+Read example/config.lua. It should give you a basic idea of how configuring swindle works.
 
-> its good to move/copy /etc/swindle/config.lua to $HOME/.config/swindle/, but will start without this step if you choose not to.
+> Its good to move/copy /etc/swindle/config.lua to $HOME/.config/swindle/, but will start without this step if you choose not to.
 
 ## Checklist
 
-- [x] separate the trackpad scroll from the mousee scroll
+- [x] Separate the trackpad scroll from the mouse scroll
 - [ ] Add ability to change your keymap
 - [ ] Add animations via [scenefx](https://github.com/wlrfx/scenefx) when 0.5 drops (in another branch)
 - [x] Add the ability for the compositor to read a custom path for configs
@@ -65,4 +65,4 @@ read example/config.lua. It should give you a basic idea of how configuring swin
 
 ## License
 
-GPL-v3, probably
+GPL-v3, probably.
