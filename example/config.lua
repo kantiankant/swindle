@@ -77,6 +77,7 @@ keybinds = {
 	{ mods = { "logo", "shift" }, key = "greater", action = "tagmon", args = { "right" } },
 	{ mods = { "logo" }, key = "Tab", action = "switchlayout" },
 	{ mods = { "logo", "shift" }, key = "e", action = "quit" },
+	{ mods = { "logo", "alt" }, key = "r", action = "livereload" },
 }
 
 -- layout switchers (also available: setlayout_dwindle, setlayout_master)

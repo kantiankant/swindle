@@ -1870,6 +1870,25 @@ static void dispatch_action(const char *action,
     return;
   }
 
+  if (!strcmp(action, "livereload")) {
+    char cfgpath[1024];
+    const char *path = custom_cfg_path;
+    Config newcfg;
+    if (!path) {
+      config_get_path(cfgpath, sizeof(cfgpath));
+      path = cfgpath;
+    }
+    if (config_load(path, &newcfg) < 0) {
+      fprintf(stderr, "swindle: failed to reload config from '%s'\n", path);
+      return;
+    }
+    Monitor *m;
+    cfg = newcfg;
+    wl_list_for_each(m, &mons, link) arrange(m);
+    printstatus();
+    return;
+  }
+
   fprintf(stderr, "swindle: unknown action '%s'\n", action);
 }
 
