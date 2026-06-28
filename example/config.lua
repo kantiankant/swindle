@@ -75,8 +75,14 @@ keybinds = {
 	{ mods = { "logo" }, key = "period", action = "focusmon", args = { "right" } },
 	{ mods = { "logo", "shift" }, key = "less", action = "tagmon", args = { "left" } },
 	{ mods = { "logo", "shift" }, key = "greater", action = "tagmon", args = { "right" } },
+	{ mods = { "logo" }, key = "Tab", action = "switchlayout" },
 	{ mods = { "logo", "shift" }, key = "e", action = "quit" },
 }
+
+-- layout switchers (also available: setlayout_dwindle, setlayout_master)
+-- uncomment to bind directly:
+-- { mods = { "logo", "ctrl" }, key = "1", action = "setlayout_dwindle" },
+-- { mods = { "logo", "ctrl" }, key = "2", action = "setlayout_master" },
 
 for i = 1, 9 do
 	local key = tostring(i)

@@ -17,7 +17,6 @@ Swindle is a fork of [dwl](https://codeeberg.org/dwl/dwl) that was designed from
 - NO cool vfx (yet)
 - nearly NO documentation
 - almost ZERO good original code
-- only ONE tiling layout (dwindle)
 
 > Fun fact: I actually took some parts of [MangoWM](https://github.com/mangowm/mango) (such as the ext-workspaces implementation). hence why the LICENSE.mangowm exists
 
