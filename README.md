@@ -1,5 +1,6 @@
 <!--toc:start-->
 - [Swindle](#swindle)
+- [Features](#features)
 - [Dependencies](#dependencies)
 - [Things that are good to have](#things-that-are-good-to-have)
 - [Known Issues](#known-issues)
@@ -12,11 +13,17 @@
 
 > "It's so bad it's not even funny!" -kantiankant, 2026
 
-Swindle is a fork of [dwl](https://codeeberg.org/dwl/dwl) that was designed from the start with one goal: to make it feel like the poor man's Hyprland. It has the following:
+Swindle is a fork of [dwl](https://codeeberg.org/dwl/dwl) that was designed from the start with one goal: to make it feel like the poor man's Hyprland.
 
+## Features
+
+- Lua configuration
+- Dwindle, Master, and Floating layouts
+- XWayland support
+- ext-workspaces protocol
+- Config lookup in both ~/.config/swindle and /etc/swindle
+- Lightweight wlroots-based compositor
 - NO cool vfx (yet)
-- nearly NO documentation
-- almost ZERO good original code
 
 > Fun fact: I actually took some parts of [MangoWM](https://github.com/mangowm/mango) (such as the ext-workspaces implementation). hence why the LICENSE.mangowm exists
 
