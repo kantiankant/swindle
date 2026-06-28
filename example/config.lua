@@ -69,14 +69,21 @@ keybinds = {
 	{ mods = { "logo", "shift" }, key = "J", action = "swapdir", args = { "down" } },
 	{ mods = { "logo", "shift" }, key = "K", action = "swapdir", args = { "up" } },
 	{ mods = { "logo", "shift" }, key = "L", action = "swapdir", args = { "right" } },
-	{ mods = { "logo" }, key = "Tab", action = "view" },
+	{ mods = { "logo" }, key = "Tab", action = "switchlayout" },
 	{ mods = { "logo" }, key = "0", action = "view", args = { "all" } },
 	{ mods = { "logo" }, key = "comma", action = "focusmon", args = { "left" } },
 	{ mods = { "logo" }, key = "period", action = "focusmon", args = { "right" } },
 	{ mods = { "logo", "shift" }, key = "less", action = "tagmon", args = { "left" } },
 	{ mods = { "logo", "shift" }, key = "greater", action = "tagmon", args = { "right" } },
 	{ mods = { "logo", "shift" }, key = "e", action = "quit" },
+	{ mods = { "logo", "alt" }, key = "r", action = "livereload" },
 }
+
+-- layout switchers (also available: setlayout_dwindle, setlayout_master, setlayout_monocle)
+-- uncomment to bind directly:
+-- { mods = { "logo", "ctrl" }, key = "1", action = "setlayout_dwindle" },
+-- { mods = { "logo", "ctrl" }, key = "2", action = "setlayout_master" },
+-- { mods = { "logo", "ctrl" }, key = "3", action = "setlayout_monocle" },
 
 for i = 1, 9 do
 	local key = tostring(i)

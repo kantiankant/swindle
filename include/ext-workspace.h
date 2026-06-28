@@ -26,6 +26,7 @@ struct ext_workspace {
 static struct wlr_ext_workspace_manager_v1 *ext_workspace_manager;
 static struct wl_list ext_workspaces; 
 static struct wl_listener ext_commit_listener;
+static struct wl_listener ext_destroy_listener;
 
 /* helpers */
 
@@ -187,6 +188,13 @@ handle_ext_commit(struct wl_listener *listener, void *data)
 /* init */
 
 static void
+handle_ext_destroy(struct wl_listener *listener, void *data)
+{
+	wl_list_remove(&ext_commit_listener.link);
+	wl_list_remove(&ext_destroy_listener.link);
+}
+
+static void
 workspaces_init(void)
 {
 	ext_workspace_manager = wlr_ext_workspace_manager_v1_create(dpy, 1);
@@ -195,4 +203,8 @@ workspaces_init(void)
 	ext_commit_listener.notify = handle_ext_commit;
 	wl_signal_add(&ext_workspace_manager->events.commit,
 			&ext_commit_listener);
+
+	ext_destroy_listener.notify = handle_ext_destroy;
+	wl_signal_add(&ext_workspace_manager->events.destroy,
+			&ext_destroy_listener);
 }
