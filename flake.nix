@@ -26,7 +26,7 @@
 
           buildInputs = with pkgs; [
             wayland           
-            wlroots          
+            wlroots_0_20          
             pixman          
             libxkbcommon
             libinput
